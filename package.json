@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "algos": "^1.0.8",
+    "cassowary": "0.0.2",
+    "lodash": "^4.17.4"
+  }
+}
