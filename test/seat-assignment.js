@@ -23,13 +23,7 @@ const distanceConstraints = [
         name1: 'Randy',
         name2: 'Chloe',
         value: 1
-    }),
-    new DistanceConstraint({
-        name1: 'Alex',
-        name2: 'Idan',
-        operator: '>=',
-        value: 2
-    }),
+    })
 ]
 
 const positionConstraints = [
