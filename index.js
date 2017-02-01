@@ -1,6 +1,17 @@
-var algos = require('algos')
-var _ = require('lodash')
-var Joi = require('joi')
+const _ = require('lodash')
+const Joi = require('joi')
+const algos = require('algos')
+
+const Schema = {
+    rows: Joi.array().items(
+        Joi.array().items(Joi.string().allow(null))
+    ).required(),
+
+    position: Joi.object().keys({
+        row: Joi.number().required(),
+        col: Joi.number().required()
+    }).required()
+}
 
 class DistanceConstraint {
     constructor(params) {
@@ -8,7 +19,7 @@ class DistanceConstraint {
         let schema = Joi.object().keys({
             name1: Joi.string().required(),
             name2: Joi.string().required(),
-            operator: Joi.string().valid('=', '>', '<', '>=', '<=').default('='),
+            operator: Joi.string().valid('=', '>', '<', '>=', '<='),
             value: Joi.number().min(1).required()
         }).required()
 
@@ -16,7 +27,7 @@ class DistanceConstraint {
 
         this.name1 = params.name1
         this.name2 = params.name2
-        this.operator = params.operator
+        this.operator = params.operator || '='
         this.value = params.value
     }
 
@@ -26,15 +37,15 @@ class DistanceConstraint {
 
         switch (this.operator) {
         case '=':
-            return this.value == distance
+            return distance == this.value
         case '>':
-            return this.value > distance
+            return distance > this.value
         case '<':
-            return this.value < distance
+            return distance < this.value
         case '>=':
-            return this.value >= distance
+            return distance >= this.value
         case '<=':
-            return this.value <= distance
+            return distance <= this.value
         }
 
         return false
@@ -46,10 +57,7 @@ class PositionConstraint {
 
         let schema = Joi.object().keys({
             name: Joi.string().required(),
-            value: Joi.object().keys({
-                row: Joi.number().required(),
-                col: Joi.number().required()
-            }).required()
+            value: Schema.position
         })
 
         Joi.assert(params, schema)
@@ -59,22 +67,20 @@ class PositionConstraint {
     }
 
     evaluate(position) {
-        let schema = Joi.object().keys({
-            row: Joi.number().required(),
-            col: Joi.number().required()
-        }).required()
-        Joi.assert(position, schema)
-
+        Joi.assert(position, Schema.position)
         return position.row == this.value.row && position.col == this.value.col
     }
 }
 
-function BinPacking( numBins ) {
+function SeatAssignment() {
 
     this.employees = [
         'Robert', 'Scott', 'Guy', 'Bo', 'Idan', 'Chloe',
         'Cassy', 'Lois', 'Kaili', 'Alex', 'Randy'
     ]
+
+    const numRows = 2
+    const numCols = 6
 
     function getEmployeePosition(rows, employee) {
         var position = null
@@ -89,13 +95,16 @@ function BinPacking( numBins ) {
     }
 
     function distance(rows, employee1, employee2) {
+
+        Joi.assert(rows, Schema.rows)
+        Joi.assert(employee1, Joi.string().min(1).required())
+        Joi.assert(employee2, Joi.string().min(1).required())
+
         let position1 = getEmployeePosition(rows, employee1)
         let position2 = getEmployeePosition(rows, employee2)
+
         return Math.abs(position1.row - position2.row) + Math.abs(position1.col - position2.col)
     }
-
-    var numRows = 2
-    var numCols = 6
 
     var distanceConstraints = [
         new DistanceConstraint({
@@ -140,19 +149,53 @@ function BinPacking( numBins ) {
         })
     ]
 
+    this.randomRows = function() {
+
+        let fixedEmployees = positionConstraints.map( (constraint) => constraint.name )
+        let shuffledEmployees = _.shuffle(this.employees)
+        let unplacedEmployees = _.difference(shuffledEmployees, fixedEmployees)
+
+        function getFixedEmployeeForPosition(position) {
+            Joi.assert(position, Schema.position)
+            let constraint = _.find(positionConstraints, function(constraint) {
+                return constraint.evaluate(position)
+            })
+            if (!constraint) {
+                return null
+            }
+            return constraint.name
+        }
+
+        let rows = []
+        for (let rowIndex = 0; rowIndex < numRows; rowIndex++) {
+            let cols = []
+            for (let colIndex = 0; colIndex < numCols; colIndex++) {
+                let position = { row: rowIndex, col: colIndex }
+                let employee = getFixedEmployeeForPosition(position) || unplacedEmployees.pop() || null
+                cols.push(employee)
+            }
+            rows.push(cols)
+        }
+
+        return rows
+    }
+
     /**
     Initial solution function defines the starting state. Each bin gets 6 items - each 
     costing the bin number: bin0 contains 0,0,0,0,0,0  ... bin1 contains 1,1,1,1,1,1  ... binN contains N,N,N,N,N,N
     */
     this.initial_solution = function() {
-        return this.random_transition()
+        return this.randomRows()
     }
 
     /**
         how much does a solution cost. Make sure you have a 
         metric that measures the effective energy of a solution
     */
-    this.solution_cost = function( solution ) {
+    this.solution_cost = function(solution) {
+
+        Joi.assert(solution, Schema.rows)
+
         var energy = 0
 
         _.each(distanceConstraints, function(constraint) {
@@ -182,18 +225,27 @@ function BinPacking( numBins ) {
 
         Return the new solution
     */
-    this.random_transition = function( solution ) {
-        let employees = _.shuffle(this.employees)
-        let rows = []
-        for (let rowIndex = 0; rowIndex < numRows; rowIndex++) {
-            var cols = []
-            for (let colIndex = 0; colIndex < numCols; colIndex++) {
-                let employee = employees.pop() || null
-                cols.push(employee)
-            }
-            rows.push(cols)
-        }
-        return rows
+    this.random_transition = function(solution) {
+
+        Joi.assert(solution, Schema.rows)
+
+        return this.randomRows()
+
+        // let position1 = { 
+        //     row: _.random(0, numRows - 1),
+        //     col: _.random(0, numCols - 1)
+        // }
+        // let position2 = { 
+        //     row: _.random(0, numRows - 1),
+        //     col: _.random(0, numCols - 1)
+        // }
+
+        // let employee1 = solution[position1.row][position1.col]
+        // let employee2 = solution[position2.row][position2.col]
+        // solution[position1.row][position1.col] = employee2
+        // solution[position2.row][position2.col] = employee1
+
+        // return solution
     }
     /**
         This is purely for niceness/debugging. It's not part of the
@@ -204,12 +256,10 @@ function BinPacking( numBins ) {
     }
 }
 
-var algos = require( "algos" ) ;        // npm install algos 
+SeatAssignment.prototype = new algos.SimulatedAnnealing()
+SeatAssignment.prototype.constructor = SeatAssignment
 
-BinPacking.prototype = new algos.SimulatedAnnealing();  // Here's where the "inheritance" occurs 
-BinPacking.prototype.constructor=BinPacking;            
-
-var testBinPacking = new BinPacking( 30 ) ;         // 30 bins of random test data
-var result = testBinPacking.anneal()  ;             // sort the bins evenly
-console.log( result ) ;                  // log the result
+var assignment = new SeatAssignment()
+var result = assignment.anneal()
+console.log(result)
 
