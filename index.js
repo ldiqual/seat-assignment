@@ -1,5 +1,5 @@
 const SeatAssignment = require('./lib/seat-assignment')
-const { DistanceConstraint, PositionConstraint } = require('./lib/constraint')
+const { DistanceConstraint, PositionConstraint, ConstraintPriority } = require('./lib/constraint')
 
 const employees = [
     'Robert', 'Scott', 'Guy', 'Bo', 'Idan', 'Chloe',
@@ -26,7 +26,8 @@ const distanceConstraints = [
         name1: 'Alex',
         name2: 'Idan',
         operator: '>=',
-        value: 2
+        value: 2,
+        priority: ConstraintPriority.low
     }),
 ]
 

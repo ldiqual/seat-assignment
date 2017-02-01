@@ -124,7 +124,7 @@ describe('SeatAssignment', function() {
                 [ 'Cassy', 'Lois', 'Guy', 'Idan', 'Bo', null ]
             ]
 
-            expect(seatAssignment.solution_cost(solution)).to.equal(1)
+            expect(seatAssignment.solution_cost(solution)).to.equal(500)
         })
 
         it('works', function() {
@@ -157,7 +157,7 @@ describe('SeatAssignment', function() {
                 [ 'Cassy', 'Lois', 'Guy', 'Idan', 'Bo', null ]
             ]
 
-            expect(seatAssignment.solution_cost(solution)).to.equal(6)
+            expect(seatAssignment.solution_cost(solution)).to.equal(1500)
         })
     })
 })
