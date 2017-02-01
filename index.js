@@ -19,6 +19,26 @@ class DistanceConstraint {
         this.operator = params.operator
         this.value = params.value
     }
+
+    evaluate(distance) {
+        let schema = Joi.number().required()
+        Joi.assert(distance, schema)
+
+        switch (this.operator) {
+        case '=':
+            return this.value == distance
+        case '>':
+            return this.value > distance
+        case '<':
+            return this.value < distance
+        case '>=':
+            return this.value >= distance
+        case '<=':
+            return this.value <= distance
+        }
+
+        return false
+    }
 }
 
 class PositionConstraint {
@@ -26,9 +46,8 @@ class PositionConstraint {
 
         let schema = Joi.object().keys({
             name: Joi.string().required(),
-            operator: Joi.string().valid('=', '>', '<', '>=', '<=').default('='),
             value: Joi.object().keys({
-                line: Joi.number().required(),
+                row: Joi.number().required(),
                 col: Joi.number().required()
             }).required()
         })
@@ -36,8 +55,17 @@ class PositionConstraint {
         Joi.assert(params, schema)
 
         this.name = params.name
-        this.operator = params.operator
         this.value = params.value
+    }
+
+    evaluate(position) {
+        let schema = Joi.object().keys({
+            row: Joi.number().required(),
+            col: Joi.number().required()
+        }).required()
+        Joi.assert(position, schema)
+
+        return position.row == this.value.row && position.col == this.value.col
     }
 }
 
@@ -48,22 +76,22 @@ function BinPacking( numBins ) {
         'Cassy', 'Lois', 'Kaili', 'Alex', 'Randy'
     ]
 
-    function table(rows, employee) {
-        var table = null
+    function getEmployeePosition(rows, employee) {
+        var position = null
         _.each(rows, function(row, rowIndex) {
             _.each(row, function(col, colIndex) {
                 if (col == employee) {
-                    table = [rowIndex, colIndex]
+                    position = { row: rowIndex, col: colIndex }
                 }
             })
         })
-        return table
+        return position
     }
 
     function distance(rows, employee1, employee2) {
-        let table1 = table(rows, employee1)
-        let table2 = table(rows, employee2)
-        return Math.abs(table2[0] - table1[0]) + Math.abs(table2[1] - table1[1])
+        let position1 = getEmployeePosition(rows, employee1)
+        let position2 = getEmployeePosition(rows, employee2)
+        return Math.abs(position1.row - position2.row) + Math.abs(position1.col - position2.col)
     }
 
     var numRows = 2
@@ -96,19 +124,19 @@ function BinPacking( numBins ) {
     var positionConstraints = [
         new PositionConstraint({
             name: 'Scott',
-            value: {line: 0, col: 1}
+            value: {row: 0, col: 1}
         }),
         new PositionConstraint({
             name: 'Robert',
-            value: {line: 0, col: 0}
+            value: {row: 0, col: 0}
         }),
         new PositionConstraint({
             name: 'Cassy',
-            value: {line: 1, col: 0}
+            value: {row: 1, col: 0}
         }),
         new PositionConstraint({
             name: 'Lois',
-            value: {line: 1, col: 1}
+            value: {row: 1, col: 1}
         })
     ]
 
@@ -129,14 +157,16 @@ function BinPacking( numBins ) {
 
         _.each(distanceConstraints, function(constraint) {
             let d = distance(solution, constraint.name1, constraint.name2)
-            if (d != constraint.value) {
+            let evaluation = constraint.evaluate(d)
+            if (!evaluation) {
                 energy += 1
             }
         })
 
-        _.each(positionConstraints, function(constant) {
-            let t = table(solution, constant.name)
-            if (t[0] != constant.value.line || t[1] != constant.value.col) {
+        _.each(positionConstraints, function(constraint) {
+            let position = getEmployeePosition(solution, constraint.name)
+            let evaluation = constraint.evaluate(position)
+            if (!evaluation) {
                 energy += 5
             }
         })
