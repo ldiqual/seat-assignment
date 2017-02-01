@@ -1,5 +1,45 @@
 var algos = require('algos')
 var _ = require('lodash')
+var Joi = require('joi')
+
+class DistanceConstraint {
+    constructor(params) {
+
+        let schema = Joi.object().keys({
+            name1: Joi.string().required(),
+            name2: Joi.string().required(),
+            operator: Joi.string().valid('=', '>', '<', '>=', '<=').default('='),
+            value: Joi.number().min(1).required()
+        }).required()
+
+        Joi.assert(params, schema)
+
+        this.name1 = params.name1
+        this.name2 = params.name2
+        this.operator = params.operator
+        this.value = params.value
+    }
+}
+
+class PositionConstraint {
+    constructor(params) {
+
+        let schema = Joi.object().keys({
+            name: Joi.string().required(),
+            operator: Joi.string().valid('=', '>', '<', '>=', '<=').default('='),
+            value: Joi.object().keys({
+                line: Joi.number().required(),
+                col: Joi.number().required()
+            }).required()
+        })
+
+        Joi.assert(params, schema)
+
+        this.name = params.name
+        this.operator = params.operator
+        this.value = params.value
+    }
+}
 
 function BinPacking( numBins ) {
 
@@ -29,18 +69,47 @@ function BinPacking( numBins ) {
     var numRows = 2
     var numCols = 6
 
-    var constraints = [
-        ['Kaili', 'Lois', 1],
-        ['Guy', 'Lois', 1],
-        ['Randy', 'Chloe', 1],
-        ['Alex', 'Idan', 3]
+    var distanceConstraints = [
+        new DistanceConstraint({
+            name1: 'Kaili',
+            name2: 'Lois',
+            value: 1
+        }),
+        new DistanceConstraint({
+            name1: 'Guy',
+            name2: 'Lois',
+            value: 1
+        }),
+        new DistanceConstraint({
+            name1: 'Randy',
+            name2: 'Chloe',
+            value: 1
+        }),
+        new DistanceConstraint({
+            name1: 'Alex',
+            name2: 'Idan',
+            operator: '>=',
+            value: 2
+        }),
     ]
 
-    var constants = [
-        ['Scott', 0, 1],
-        ['Robert', 0, 0],
-        ['Cassy', 1, 0],
-        ['Lois', 1, 1]
+    var positionConstraints = [
+        new PositionConstraint({
+            name: 'Scott',
+            value: {line: 0, col: 1}
+        }),
+        new PositionConstraint({
+            name: 'Robert',
+            value: {line: 0, col: 0}
+        }),
+        new PositionConstraint({
+            name: 'Cassy',
+            value: {line: 1, col: 0}
+        }),
+        new PositionConstraint({
+            name: 'Lois',
+            value: {line: 1, col: 1}
+        })
     ]
 
     /**
@@ -58,16 +127,16 @@ function BinPacking( numBins ) {
     this.solution_cost = function( solution ) {
         var energy = 0
 
-        _.each(constraints, function(constraint) {
-            let d = distance(solution, constraint[0], constraint[1])
-            if (d != constraint[2]) {
+        _.each(distanceConstraints, function(constraint) {
+            let d = distance(solution, constraint.name1, constraint.name2)
+            if (d != constraint.value) {
                 energy += 1
             }
         })
 
-        _.each(constants, function(constant) {
-            let t = table(solution, constant[0])
-            if (t[0] != constant[1] || t[1] != constant[2]) {
+        _.each(positionConstraints, function(constant) {
+            let t = table(solution, constant.name)
+            if (t[0] != constant.value.line || t[1] != constant.value.col) {
                 energy += 5
             }
         })

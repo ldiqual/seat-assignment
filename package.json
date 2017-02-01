@@ -2,6 +2,7 @@
   "dependencies": {
     "algos": "^1.0.8",
     "cassowary": "0.0.2",
+    "joi": "^10.2.0",
     "lodash": "^4.17.4"
   }
 }
